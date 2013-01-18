@@ -3,6 +3,7 @@
 
 #include <QMainWindow>
 #include <QTcpSocket>
+#include <QMutex>
 
 namespace Ui {
 class MainWindow;
@@ -19,8 +20,10 @@ public:
 private:
     Ui::MainWindow *ui;
     QTcpSocket *_pSocket;
-    QStringList  _userList;
+    QStringList _userList;
+    QMutex _mutex;
     void updateUserList();
+    void test();
 
 public slots:
     void readTcpData();

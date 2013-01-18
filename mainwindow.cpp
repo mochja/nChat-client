@@ -2,12 +2,15 @@
 #include "ui_mainwindow.h"
 #include <QStringListModel>
 #include <QList>
+#include <QDebug>
+
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+    ui->textEdit->installEventFilter(this);
     _pSocket = new QTcpSocket( this );
     connect( _pSocket, SIGNAL(readyRead()), SLOT(readTcpData()) );
     on_actionConnect_triggered();
@@ -17,7 +20,7 @@ MainWindow::MainWindow(QWidget *parent) :
 }
 
 void MainWindow::updateUserList() {
-    ui->userListView->setModel( new QStringListModel(_userList)) ;
+    ui->userListView->setModel( new QStringListModel(_userList) ) ;
 }
 
 void MainWindow::readTcpData() {
@@ -28,20 +31,28 @@ void MainWindow::readTcpData() {
     ds >> t;
     ds >> id;
     if (t != 1) {
-        ui->textEdit->append("unknow packet");
+        ui->textEdit->append("<span style=\"color: red; font-weight: bold\">unknow packet " + (QString) id + "</span>");
         return;
     }
     switch (id) {
         case 0x01: {
             QString txt;
             ds >> txt;
-            ui->textEdit->append(txt);
+            ui->textEdit->append(txt.toHtmlEscaped());
             break;
         }
         case 0x02: {
             QList<QString> userList;
             ds >> userList;
-            ui->textEdit->append((QString) userList.length());
+            _userList = userList;
+            updateUserList();
+            break;
+        }
+        case 0x03: {
+            QString txt;
+            ds >> txt;
+            ui->textEdit->moveCursor(QTextCursor::End);
+            ui->textEdit->append(txt);
             break;
         }
     }
@@ -50,6 +61,16 @@ void MainWindow::readTcpData() {
 MainWindow::~MainWindow()
 {
     delete ui;
+}
+
+void MainWindow::test() {
+    QByteArray data;
+    QDataStream ds(&data, QIODevice::ReadWrite);
+    QList<QString> userList;
+    userList.append("test");
+    userList.append("nick");
+    ds << userList;
+    _pSocket->write( data );
 }
 
 void MainWindow::on_pushButton_clicked()
@@ -65,11 +86,14 @@ void MainWindow::on_pushButton_clicked()
 
 void MainWindow::on_actionConnect_triggered()
 {
-    // delete _pSocket;
     QString nick = ui->userNameEdit->text();
 
     if (_pSocket->state() == QTcpSocket::ConnectedState) {
+        _pSocket->disconnect();
         _pSocket->abort();
+        delete _pSocket;
+        _pSocket = new QTcpSocket( this );
+        connect( _pSocket, SIGNAL(readyRead()), SLOT(readTcpData()) );
     }
 
     _pSocket->connectToHost(ui->hostEdit->text(), ui->portEdit->text().toInt());
