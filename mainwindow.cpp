@@ -3,6 +3,7 @@
 #include <QStringListModel>
 #include <QList>
 #include <QDebug>
+#include <QDateTime>
 
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -52,6 +53,8 @@ void MainWindow::readTcpData() {
             QString txt;
             ds >> txt;
             ui->textEdit->moveCursor(QTextCursor::End);
+            QTime time = QTime::currentTime();
+            txt.replace(QString("{!{$date}!}"), time.toString().append(" "));
             ui->textEdit->append(txt);
             break;
         }
@@ -61,16 +64,6 @@ void MainWindow::readTcpData() {
 MainWindow::~MainWindow()
 {
     delete ui;
-}
-
-void MainWindow::test() {
-    QByteArray data;
-    QDataStream ds(&data, QIODevice::ReadWrite);
-    QList<QString> userList;
-    userList.append("test");
-    userList.append("nick");
-    ds << userList;
-    _pSocket->write( data );
 }
 
 void MainWindow::on_pushButton_clicked()
